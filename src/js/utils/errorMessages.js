@@ -53,11 +53,13 @@ export function translateApiMessage(message, fallbackMessage = 'Revisa los datos
   }
 
   const normalized = message.trim();
+
   if (!normalized) {
     return fallbackMessage;
   }
 
   const exactTranslation = EXACT_TRANSLATIONS.get(normalized);
+
   if (exactTranslation) {
     return exactTranslation;
   }
@@ -69,6 +71,7 @@ export function translateApiMessage(message, fallbackMessage = 'Revisa los datos
   }
 
   const lowerMessage = normalized.toLowerCase();
+
   if (ENGLISH_HINTS.some((hint) => lowerMessage.includes(hint))) {
     return fallbackMessage;
   }
