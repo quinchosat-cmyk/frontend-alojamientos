@@ -21,16 +21,58 @@ function normalizeView(view) {
   return normalized || 'home';
 }
 
+function matchRoutePattern(pattern, path) {
+  const patternParts = pattern.split('/');
+  const pathParts = path.split('/');
+
+  if (patternParts.length !== pathParts.length) {
+    return null;
+  }
+
+  const params = {};
+
+  for (let index = 0; index < patternParts.length; index += 1) {
+    const patternPart = patternParts[index];
+    const pathPart = pathParts[index];
+
+    if (patternPart.startsWith(':')) {
+      const paramName = patternPart.slice(1);
+      params[paramName] = pathPart;
+      continue;
+    }
+
+    if (patternPart !== pathPart) {
+      return null;
+    }
+  }
+
+  return params;
+}
+
 function findRoute(path) {
   const normalizedPath = normalizeView(path);
 
-  return routes.find((route) => {
-    if (route.path === normalizedPath) {
-      return true;
+  for (const route of routes) {
+    const params = matchRoutePattern(route.path, normalizedPath);
+
+    if (params) {
+      return {
+        ...route,
+        params,
+      };
     }
 
-    return route.aliases?.includes(normalizedPath);
-  });
+    const aliasMatch = route.aliases?.find((alias) => alias === normalizedPath);
+
+    if (aliasMatch) {
+      return {
+        ...route,
+        params: {},
+      };
+    }
+  }
+
+  return null;
 }
 
 function renderNotFoundPage() {
@@ -41,9 +83,11 @@ function renderNotFoundPage() {
           <div class="card border-0 shadow-sm">
             <div class="card-body p-4 p-md-5 text-center">
               <h1 class="h3 mb-3">Página no encontrada</h1>
+
               <p class="text-muted mb-4">
                 La vista solicitada no está disponible en esta SPA.
               </p>
+
               <a class="btn btn-primary" href="#" data-view="home">
                 Ir al inicio
               </a>
@@ -62,6 +106,7 @@ function renderForbiddenPage() {
         <div class="col-12 col-lg-8">
           <div class="alert alert-danger shadow-sm" role="alert">
             <h1 class="h4">Acceso denegado</h1>
+
             <p class="mb-0">
               No tienes permisos para acceder a esta sección.
             </p>
@@ -128,15 +173,16 @@ function renderRoute(path = currentView) {
     return;
   }
 
-  currentView = route.path;
+  currentView = normalizedPath;
 
-  const pageHtml = route.page?.() ?? '';
+  const pageHtml = route.page?.(route.params) ?? '';
 
   renderPageShell(route, pageHtml);
 
   route.mount?.({
     navigate,
     render: renderRoute,
+    params: route.params,
     view: currentView,
   });
 }
